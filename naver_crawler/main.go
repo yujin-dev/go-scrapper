@@ -1,6 +1,8 @@
 package main
 
-import "github.com/go-scrapper/naver_crawler/scrap"
+import (
+	"github.com/go-scrapper/naver_crawler/scrap"
+)
 
 // var columns = map[string]int{
 // 	"time":   0,
@@ -10,5 +12,6 @@ import "github.com/go-scrapper/naver_crawler/scrap"
 
 func main() {
 	var stock_codes = []string{"005930", "000250"}
-	scrap.UpdateStocks("202101191530", stock_codes)
+	// scrap.UpdateStocks("202101191530", stock_codes)
+	scrap.ScrapeStocks("202101191530", stock_codes)
 }
