@@ -1,7 +1,6 @@
 package scrap
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -19,35 +18,21 @@ type extractedData struct {
 	volume     string
 }
 
-var columns = map[int]string{
-	0: "time",
-	1: "price",
-	6: "volume",
-}
-
-func UpdateStocks(time string, stock_codes []string) []extractedData {
-	// time 기준 가장 최근 데이터 추출
-	var total []extractedData
-	c := make(chan extractedData)
-	for _, stock_code := range stock_codes {
-		go getFirst(stock_code, time, c)
-	}
-	for i := 0; i < len(stock_codes); i++ {
-		extractedStock := <-c
-		total = append(total, extractedStock)
-	}
-	return total
-}
-
-func ScrapeStocks(time string, stock_codes []string) {
-	c := make(chan extractedData)
+func ScrapeStocks(time string, stock_codes []string) []extractedData {
+	var allData []extractedData
+	c := make(chan []extractedData)
 	for _, stock_code := range stock_codes {
 		go getAll(stock_code, time, c)
 	}
+
+	for i := 0; i < len(stock_codes); i++ {
+		data := <-c
+		allData = append(allData, data...)
+	}
+	return allData
 }
 
 func getRes(url string) *goquery.Document {
-	fmt.Println(url)
 	req, err := http.NewRequest("GET", url, nil)
 	checkErr(err)
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36")
@@ -68,7 +53,8 @@ func TotalPage(stock_code string, time string) string {
 	return strings.TrimSpace(pages[1])
 }
 
-func getAll(stock_code string, time string, c chan<- extractedData) {
+func getAll(stock_code string, time string, c chan<- []extractedData) { // []extractedData로 안하면 오류
+	var stockData []extractedData
 	p := TotalPage(stock_code, time)
 	pages, _ := strconv.Atoi(p)
 	pageChan := make(chan map[string][]string)
@@ -78,11 +64,20 @@ func getAll(stock_code string, time string, c chan<- extractedData) {
 	}
 
 	for i := 1; i <= pages; i++ {
-		mapRes := <-pageChan
-		fmt.Println(mapRes)
+		pageData := <-pageChan
+		for i := 0; i < len(pageData["stock_code"]); i++ {
+			row := extractedData{
+				stock_code: pageData["stock_code"][i],
+				date:       pageData["date"][i],
+				time:       pageData["time"][i],
+				price:      pageData["price"][i],
+				volume:     pageData["volume"][i],
+			}
+			stockData = append(stockData, row)
+		}
 	}
+	c <- stockData
 
-	// c <- totalData
 }
 
 func getPage(page string, stock_code string, time string, c chan<- map[string][]string) {
@@ -108,33 +103,8 @@ func getPage(page string, stock_code string, time string, c chan<- map[string][]
 			data["volume"] = append(data["volume"], s.Text())
 		}
 	})
-	fmt.Println(data)
+	// fmt.Println(data)
 	c <- data
-}
-
-func getFirst(stock_code string, time string, c chan<- extractedData) {
-	var url = "https://finance.naver.com/item/sise_time.nhn?code=" + stock_code + "&thistime=" + time + "&page=1"
-	doc := getRes(url)
-
-	searchData := doc.Find(".tah")
-	recentData := extractedData{stock_code: stock_code, date: time[:8]}
-
-	searchData.Each(func(i int, s *goquery.Selection) {
-		// fmt.Println(i, s)
-		if i < 7 {
-
-			switch i % 7 {
-			case 0:
-				recentData.time = s.Text()
-			case 1:
-				recentData.price = s.Text()
-			case 6:
-				recentData.volume = s.Text()
-			}
-		}
-	})
-	fmt.Println(recentData)
-	c <- recentData
 }
 
 func checkErr(err error) {
