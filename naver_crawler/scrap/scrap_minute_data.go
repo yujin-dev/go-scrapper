@@ -21,6 +21,7 @@ type extractedData struct {
 func ScrapeStocks(time string, stock_codes []string) []extractedData {
 	var allData []extractedData
 	c := make(chan []extractedData)
+
 	for _, stock_code := range stock_codes {
 		go getAll(stock_code, time, c)
 	}
@@ -50,7 +51,11 @@ func TotalPage(stock_code string, time string) string {
 	doc := getRes(baseURL)
 	href, _ := doc.Find(".pgRR").Find("a").Attr("href")
 	pages := strings.Split(href, "page=")
-	return strings.TrimSpace(pages[1])
+	if len(pages) > 1 {
+		return strings.TrimSpace(pages[1])
+	} else {
+		return "0"
+	}
 }
 
 func getAll(stock_code string, time string, c chan<- []extractedData) { // []extractedData로 안하면 오류
@@ -59,21 +64,25 @@ func getAll(stock_code string, time string, c chan<- []extractedData) { // []ext
 	pages, _ := strconv.Atoi(p)
 	pageChan := make(chan map[string][]string)
 	// var totalData []extractedData
-	for i := 1; i <= pages; i++ {
-		go getPage(strconv.Itoa(i), stock_code, time, pageChan)
+	for i := 0; i <= pages; i++ {
+		if i > 0 {
+			go getPage(strconv.Itoa(i), stock_code, time, pageChan)
+		}
 	}
 
-	for i := 1; i <= pages; i++ {
-		pageData := <-pageChan
-		for i := 0; i < len(pageData["stock_code"]); i++ {
-			row := extractedData{
-				stock_code: pageData["stock_code"][i],
-				date:       pageData["date"][i],
-				time:       pageData["time"][i],
-				price:      pageData["price"][i],
-				volume:     pageData["volume"][i],
+	for i := 0; i <= pages; i++ {
+		if i > 0 {
+			pageData := <-pageChan
+			for i := 0; i < len(pageData["stock_code"]); i++ {
+				row := extractedData{
+					stock_code: pageData["stock_code"][i],
+					date:       pageData["date"][i],
+					time:       pageData["time"][i],
+					price:      pageData["price"][i],
+					volume:     pageData["volume"][i],
+				}
+				stockData = append(stockData, row)
 			}
-			stockData = append(stockData, row)
 		}
 	}
 	c <- stockData

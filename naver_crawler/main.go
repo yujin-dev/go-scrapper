@@ -5,10 +5,9 @@ import (
 )
 
 func main() {
-	scrap.ScrapStockCodes()
+	stock_codes := scrap.ReadStockCode("KOSPI")
 	// var stock_codes = []string{"005930", "000250"}
-	// scrap.ScrapeStocks("202102101530", stock_codes)
-	// name := strings.Join(stock_codes, "_")
-	// scrap.WriteData(name, result)
+	result := scrap.ScrapeStocks("202102101530", stock_codes)
+	scrap.WriteData("KOSPI", result)
 	// scrap.UpdateStocks("202101191530", stock_codes)
 }

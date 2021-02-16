@@ -1,20 +1,49 @@
 package scrap
 
 import (
+	"bufio"
+	"encoding/csv"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/PuerkitoBio/goquery"
 )
+
+func ReadStockCode(market string) []string {
+	file, err := os.Open("C:/Users/yujin/go/src/github.com/go-scrapper/naver_crawler/scrap/all_stock_20210216.csv")
+	checkErr(err)
+	rdr := csv.NewReader(bufio.NewReader(file))
+	rows, _ := rdr.ReadAll()
+	c := make(chan string)
+	stock_code_list := []string{} // array
+
+	for i := 1; i < len(rows); i++ {
+		go filterMarket(market, rows[i], c)
+	}
+	for i := 1; i < len(rows); i++ {
+		code := <-c
+		if code != "" {
+			stock_code_list = append(stock_code_list, code)
+		}
+	}
+	return stock_code_list
+}
+
+func filterMarket(market string, row []string, c chan<- string) {
+	market_type := row[6]
+
+	if market_type == market {
+		c <- row[1]
+	} else {
+		c <- ""
+	}
+}
 
 type stockCode struct {
 	stock_code  string
 	market_type string
 	name        string
-}
-
-func ScrapStockCodes() {
-	extractData()
 }
 
 func getKRXpage(url string) *goquery.Document {
