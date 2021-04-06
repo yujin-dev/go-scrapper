@@ -22,4 +22,5 @@ func main() {
 }
 ```
 market type(`KOSPI`) 및 특정 시간(`202102101530`) 해당 market의 전종목 분 데이터를 가져올 수 있음
+
 ※ TODO: naver_crawler\scrap\stock_minute_data.go path 수정
