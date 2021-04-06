@@ -59,6 +59,7 @@ func TotalPage(stock_code string, time string) string {
 }
 
 func getAll(stock_code string, time string, c chan<- []extractedData) { // []extractedData로 안하면 오류
+	println(stock_code, " starts")
 	var stockData []extractedData
 	p := TotalPage(stock_code, time)
 	pages, _ := strconv.Atoi(p)
